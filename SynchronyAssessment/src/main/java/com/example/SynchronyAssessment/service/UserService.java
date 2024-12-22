@@ -22,12 +22,21 @@ public class UserService {
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
-
+    @Autowired
+    private CacheService cacheService;
     private static final String USERS_CACHE_KEY = "users";
 
     @Async
     public CompletableFuture<List<User>> getAllUsers() {
-        return CompletableFuture.supplyAsync(() -> userRepository.findAll(), taskExecutor);
+        return CompletableFuture.supplyAsync(() -> {
+            List<User> cachedUsers = cacheService.getFromCache(USERS_CACHE_KEY, List.class);
+            if (cachedUsers != null) {
+                return cachedUsers;
+            }
+            List<User> users = userRepository.findAll();
+            cacheService.putInCache(USERS_CACHE_KEY, users, 300); // Cache for 5 minutes
+            return users;
+        }, taskExecutor);
     }
     @Transactional(readOnly = true)
     public List<User> getAllUsersSequential() {
@@ -35,7 +44,8 @@ public class UserService {
     }
     public User addUser(User user) {
         // Invalidate the cache when a user is added
-        redisTemplate.delete(USERS_CACHE_KEY);
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+        cacheService.evictFromCache(USERS_CACHE_KEY);
+        return savedUser;
     }
 }
