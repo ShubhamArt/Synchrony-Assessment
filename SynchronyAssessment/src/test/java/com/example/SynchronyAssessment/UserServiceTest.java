@@ -5,8 +5,10 @@ import com.example.SynchronyAssessment.repository.UserRepository;
 import com.example.SynchronyAssessment.service.UserService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -14,21 +16,33 @@ import org.springframework.boot.test.context.SpringBootTest;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.when;
+
 
 @SpringBootTest
 public class UserServiceTest {
-    @Autowired
-    private UserService userService;
 
     @Mock
     private UserRepository userRepository;
 
-    @Test
-    public void testGetAllUsers() {
-        List<User> mockUsers = List.of(new User(1L, "Alice", "alice@example.com"));
-        Mockito.when(userRepository.findAll()).thenReturn(mockUsers);
+    @InjectMocks
+    private UserService userService;
 
-        CompletableFuture<List<User>> users = userService.getAllUsers();
-        Assertions.assertEquals(1, users.join().size());
+    public UserServiceTest() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    void testGetAllUsersSequential() {
+        List<User> mockUsers = Arrays.asList(
+                new User(1L, "Alice", "alice@example.com"),
+                new User(2L, "Bob", "bob@example.com")
+        );
+        when(userRepository.findAll()).thenReturn(mockUsers);
+
+        List<User> users = userService.getAllUsersSequential();
+        assertEquals(2, users.size());
+        assertEquals("Alice", users.get(0).getName());
     }
 }

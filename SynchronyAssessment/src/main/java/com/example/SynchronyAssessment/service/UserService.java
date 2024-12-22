@@ -7,6 +7,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -28,7 +29,10 @@ public class UserService {
     public CompletableFuture<List<User>> getAllUsers() {
         return CompletableFuture.supplyAsync(() -> userRepository.findAll(), taskExecutor);
     }
-
+    @Transactional(readOnly = true)
+    public List<User> getAllUsersSequential() {
+        return userRepository.findAll(); // Direct call without parallelism
+    }
     public User addUser(User user) {
         // Invalidate the cache when a user is added
         redisTemplate.delete(USERS_CACHE_KEY);
